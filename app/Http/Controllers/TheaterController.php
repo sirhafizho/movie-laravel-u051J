@@ -90,9 +90,10 @@ class TheaterController extends Controller
 
         // Get movies for the specified theater, date, and include the pivot data
         $movies = $theater->movies()
-            ->whereHas('theaters', function ($query) use ($dDate) {
-                $query->where('d_date', $dDate);
-            })
+            // ->whereHas('theaters', function ($query) use ($dDate) {
+            //     $query->where('d_date', $dDate);
+            // })
+            ->wherePivot('d_date', $dDate)
             ->withPivot('start_time', 'end_time', 'theater_room_no')
             ->get();
 
@@ -112,6 +113,7 @@ class TheaterController extends Controller
                 'Poster' => $movie->poster,
                 'Overall_rating' => number_format($movie->overall_rating, 1),
                 'Theater_name' => $theater->theater_name,
+                'Date' => $movie->pivot->d_date,
                 'Start_time' => $movie->pivot->start_time,
                 'End_time' => $movie->pivot->end_time,
                 'Description' => $movie->description,
@@ -147,6 +149,12 @@ class TheaterController extends Controller
         $movies = $theater->movies()
             ->where('start_time', '>=', $timeStart)
             ->where('end_time', '<=', $timeEnd)
+            ->wherePivot('d_date', '=', $timeStart->format('Y-m-d'))
+            ->withPivot(
+                'start_time',
+                'end_time',
+                'theater_room_no'
+            )
             ->get();
 
         // Calculate the overall rating for each movie
@@ -155,7 +163,7 @@ class TheaterController extends Controller
         });
 
         // Format the movies data
-        $formattedMovies = $movies->map(function ($movie) {
+        $formattedMovies = $movies->map(function ($movie) use ($theater) {
             return [
                 'Movie_ID' => $movie->id,
                 'Title' => $movie->title,
@@ -164,7 +172,8 @@ class TheaterController extends Controller
                 'Genre' => $movie->genre_1,
                 'Poster' => $movie->poster,
                 'Overall_rating' => number_format($movie->overall_rating, 1),
-                'Theater_name' => $movie->pivot->theater_name,
+                'Theater_name' => $theater->theater_name,
+                'Date' => $movie->pivot->d_date,
                 'Start_time' => $movie->pivot->start_time,
                 'End_time' => $movie->pivot->end_time,
                 'Description' => $movie->description,
